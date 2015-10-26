@@ -1,7 +1,5 @@
 package com.ablanco.hashnestandroidapi;
 
-import android.content.Context;
-
 import com.google.gson.JsonSyntaxException;
 
 import java.util.ArrayList;
@@ -12,13 +10,13 @@ import java.util.ArrayList;
  */
 public class CurrencyServiceHandler {
 
-    public void getCurrency(final Context context,NetworkResponseListener<ArrayList<CurrencyModel>> listener){
+    public void getCurrency(NetworkResponseListener<ArrayList<CurrencyModel>> listener){
 
         BaseServiceAsyncTask<ArrayList<CurrencyModel>> task = new BaseServiceAsyncTask<ArrayList<CurrencyModel>>(listener){
             @Override
             protected Object doInBackground(Void... params) {
                 try {
-                    String response = CurrencyNetworkHandler.getCurrency(context);
+                    String response = CurrencyNetworkHandler.getCurrency();
                     ArrayList<CurrencyModel> currencies = GsonMapper.getInstance().createCollection(response,CurrencyModel.class);
                     return currencies;
                 }catch (HashnestClientException e){

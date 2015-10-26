@@ -23,6 +23,6 @@ dependencies {
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.0.1'
     compile ('com.google.code.gson:gson:1.7.2')
-    compile files('libs/volley_141229.jar')
+    compile 'com.squareup.okhttp:okhttp:2.5.0'
 
 }

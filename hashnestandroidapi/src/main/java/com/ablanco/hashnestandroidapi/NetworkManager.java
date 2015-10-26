@@ -1,56 +1,28 @@
 package com.ablanco.hashnestandroidapi;
 
-import android.content.Context;
+import com.squareup.okhttp.MediaType;
+import com.squareup.okhttp.OkHttpClient;
+import com.squareup.okhttp.Request;
+import com.squareup.okhttp.RequestBody;
+import com.squareup.okhttp.Response;
 
-import com.android.volley.Network;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.TimeoutError;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.BasicNetwork;
-import com.android.volley.toolbox.DiskBasedCache;
-import com.android.volley.toolbox.HttpStack;
-import com.android.volley.toolbox.HurlStack;
-import com.android.volley.toolbox.RequestFuture;
-import com.android.volley.toolbox.StringRequest;
-
-import java.io.File;
+import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.InvalidParameterException;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * Created by Álvaro Blanco Cabrero on 3/10/15
- * HashnestAndroidAPI
+ * Created by Álvaro Blanco Cabrero on 16/10/15
+ * HashnestAndroidAPI-master
  */
 class NetworkManager {
 
-
-    // Default maximum disk usage in bytes
-    private static final int DEFAULT_DISK_USAGE_BYTES = 25 * 1024 * 1024;
-
-    // Default cache folder name
-    private static final String DEFAULT_CACHE_DIR = "volleyCache";
-
-    /**
-     * Request timeout in seconds
-     */
-    private static final int REQUEST_TIMEOUT = 15;
-
-    /**
-     * Singleton instance
-     */
-    private static NetworkManager mInstance = null;
-    /**
-     * Network request queue
-     */
-    private RequestQueue mRequestQueue = null;
+    public static final MediaType JSON
+            = MediaType.parse("application/json; charset=utf-8");
 
     /**
      * Hashnest username
@@ -67,50 +39,43 @@ class NetworkManager {
      */
     private String mSecret;
 
+    /**
+     * Client to execeute requests
+     */
+    private OkHttpClient mClient;
 
-    public static void init(Context context,String username, String apiKey, String secret){
-        mInstance = new NetworkManager(context,username,apiKey,secret);
+    private static NetworkManager mInstance;
 
-    }
-
-    public static NetworkManager getInstance(Context context) {
-        if (mInstance == null && context != null) {
-            mInstance = new NetworkManager(context,null,null,null);
+    public static NetworkManager getInstance(){
+        if(mInstance == null){
+            mInstance = new NetworkManager(null,null,null);
         }
 
         return mInstance;
     }
 
-    private NetworkManager(Context context,String username, String apiKey, String secret) {
-        // set up default queue
+    public static void init(String username, String apiKey, String secret){
+        mInstance = new NetworkManager(username,apiKey,secret);
+
+    }
+
+    private NetworkManager(String username, String apiKey, String secret){
+
+        if(username == null || apiKey == null || secret == null){
+            throw new InvalidParameterException("Error dealing with parameters, did you miss something or maybe forgot to call init?");
+        }
 
         this.mUsername = username;
         this.mAPIKey = apiKey;
         this.mSecret = secret;
 
-        if(context == null || username == null || apiKey == null || secret == null){
-            throw new InvalidParameterException("Error dealing with parameters, did you miss something or maybe forgot to call init?");
-        }
-
-        // define cache folder
-        File rootCache = context.getExternalCacheDir();
-        if (rootCache == null) {
-            // Can't find External Cache Dir, switching to application specific cache directory
-            rootCache = context.getCacheDir();
-        }
-
-        File cacheDir = new File(rootCache, DEFAULT_CACHE_DIR);
-        cacheDir.mkdirs();
-
-        HttpStack stack = new HurlStack();
-        Network defaultNetwork = new BasicNetwork(stack);
-        DiskBasedCache diskBasedCache = new DiskBasedCache(cacheDir, DEFAULT_DISK_USAGE_BYTES);
-        mRequestQueue = new RequestQueue(diskBasedCache, defaultNetwork);
-        mRequestQueue.start();
-
+        this.mClient = new OkHttpClient();
+        this.mClient.setConnectTimeout(10, TimeUnit.SECONDS);
+        this.mClient.setRetryOnConnectionFailure(true);
     }
 
-    public String get(final String path,Map<String,String> params) throws HashnestClientException{
+    public String get(String path,Map<String,String> params) throws HashnestClientException {
+
         StringBuilder rawParams = new StringBuilder();
         rawParams.append(buildAuthParams());
 
@@ -128,29 +93,22 @@ class NetworkManager {
             e.printStackTrace();
         }
 
-        RequestFuture<String> future = RequestFuture.newFuture();
-        StringRequest request = new StringRequest(Request.Method.POST,NetworkConstants.HASHNEST_BASE_URL + path + encodedParams, future, future);
-        request.setShouldCache(false);
-        mRequestQueue.add(request);
-        try {
-            return future.get(REQUEST_TIMEOUT, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            throw new HashnestClientException(HashnestClientException.SERVER_ERROR, HashnestClientException.MSG_INTERNAL_SERVER_ERROR);
-        } catch (ExecutionException e) {
-            if (e.getCause() != null && e.getCause() instanceof TimeoutError) {
-                throw new HashnestClientException(HashnestClientException.SERVER_ERROR, HashnestClientException.MSG_SERVER_TIMEOUT);
-            } else if (e.getCause() != null
-                    && e.getCause() instanceof VolleyError
-                    && null != ((VolleyError) e.getCause()).networkResponse) {
-                throw new HashnestClientException((VolleyError) e.getCause());
-            } else {
-                throw new HashnestClientException(HashnestClientException.SERVER_ERROR, HashnestClientException.MSG_INTERNAL_SERVER_ERROR);
+        String finalUrl = NetworkConstants.HASHNEST_BASE_URL + path + encodedParams;
+        try{
+            RequestBody body = RequestBody.create(JSON, "");
+            Request request = new Request.Builder()
+                    .url(finalUrl)
+                    .post(body)
+                    .build();
+            Response response = mClient.newCall(request).execute();
+            if(response.isSuccessful()){
+                return response.body().string();
+            }else {
+                throw new HashnestClientException(response.code(),null);
             }
-        }catch (TimeoutException e){
+        }catch (IOException e){
             throw new HashnestClientException(HashnestClientException.SERVER_ERROR, HashnestClientException.MSG_INTERNAL_SERVER_ERROR);
-
         }
-
     }
 
     private String getSignature(String nonce) {
@@ -197,5 +155,4 @@ class NetworkManager {
         }
         return 0;
     }
-
 }

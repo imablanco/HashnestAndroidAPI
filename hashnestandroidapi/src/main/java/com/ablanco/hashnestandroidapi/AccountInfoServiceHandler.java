@@ -1,7 +1,5 @@
 package com.ablanco.hashnestandroidapi;
 
-import android.content.Context;
-
 import com.google.gson.JsonSyntaxException;
 
 /**
@@ -10,13 +8,13 @@ import com.google.gson.JsonSyntaxException;
  */
 public class AccountInfoServiceHandler {
 
-    public void getAccountInfo(final Context context,NetworkResponseListener<AccountInfoModel> listener){
+    public void getAccountInfo(NetworkResponseListener<AccountInfoModel> listener){
 
         BaseServiceAsyncTask<AccountInfoModel> task = new BaseServiceAsyncTask<AccountInfoModel>(listener){
             @Override
             protected Object doInBackground(Void... params) {
                 try {
-                    String respone = AccountInfoNetworkHandler.getAccountInfo(context);
+                    String respone = AccountInfoNetworkHandler.getAccountInfo();
                     AccountInfoModel accountInfoModel = GsonMapper.getInstance().createObject(respone,AccountInfoModel.class);
                     return accountInfoModel;
                 }catch (HashnestClientException e){

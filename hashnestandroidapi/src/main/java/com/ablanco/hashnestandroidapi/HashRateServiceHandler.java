@@ -1,7 +1,5 @@
 package com.ablanco.hashnestandroidapi;
 
-import android.content.Context;
-
 import com.google.gson.JsonSyntaxException;
 
 import java.util.ArrayList;
@@ -12,13 +10,13 @@ import java.util.ArrayList;
  */
 public class HashRateServiceHandler {
 
-    public void getHashRate(final Context context,NetworkResponseListener<ArrayList<CurrencyModel>> listener){
+    public void getHashRate(NetworkResponseListener<ArrayList<CurrencyModel>> listener){
 
         BaseServiceAsyncTask<ArrayList<CurrencyModel>> task = new BaseServiceAsyncTask<ArrayList<CurrencyModel>>(listener){
             @Override
             protected Object doInBackground(Void... params) {
                 try {
-                    String response = HashRateNetworkHandler.getHashRate(context);
+                    String response = HashRateNetworkHandler.getHashRate();
                     ArrayList<CurrencyModel> currencyModels = GsonMapper.getInstance().createCollection(response,CurrencyModel.class);
                     return currencyModels;
                 }catch (HashnestClientException e){

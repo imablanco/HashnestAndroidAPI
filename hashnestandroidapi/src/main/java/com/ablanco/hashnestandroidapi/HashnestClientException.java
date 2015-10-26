@@ -1,7 +1,5 @@
 package com.ablanco.hashnestandroidapi;
 
-import com.android.volley.VolleyError;
-
 /**
  * Created by Álvaro Blanco Cabrero on 4/10/15
  * HashnestAndroidAPISample
@@ -33,15 +31,6 @@ public class HashnestClientException extends Exception{
         setHashnestClientCode(code);
 
         if(super.getMessage() == null){
-            setHashnestDefaultMessage();
-        }
-    }
-
-    public HashnestClientException(VolleyError volleyError) {
-        super(volleyError.getMessage());
-
-        setHashnestClientCode(volleyError.networkResponse.statusCode);
-        if (null == super.getMessage()) {
             setHashnestDefaultMessage();
         }
     }
